@@ -1,6 +1,8 @@
 Olist
 ================================================
 
+Exploratory Data Analysis (EDA) Using SQL
+
 AUTHORS: Meysam Motaharfar 
 
 # Table of Contents
@@ -12,11 +14,24 @@ AUTHORS: Meysam Motaharfar
 6. [Key Insights](#Key-Insights)
 7. [Conclusions](#Conclusions)
 
+# Project Overview
 
-# Data Sources
+# Key Features
+
+# Data Source 
 
 </br>
 <div style="text-align: center;">
     <img width="1000" alt="Metrics" src="Data Base Diagram.png"> <!-- Increased width -->
 </div>
 </br>
+
+# Tools Used
+
+SQL
+
+# Key Questions
+
+# key Insights
+
+# Conclusions
