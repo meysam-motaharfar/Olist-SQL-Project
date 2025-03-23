@@ -17,6 +17,6 @@ AUTHORS: Meysam Motaharfar
 
 </br>
 <div style="text-align: center;">
-    <img width="700" alt="Metrics" src="Data Base Diagram.png">
+    <img width="1000" alt="Metrics" src="Data Base Diagram.png"> <!-- Increased width -->
 </div>
 </br>
