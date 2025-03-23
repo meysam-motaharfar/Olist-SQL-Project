@@ -15,6 +15,8 @@ AUTHORS: Meysam Motaharfar
 
 # Project Overview
 
+This project focuses on performing an Exploratory Data Analysis (EDA) using SQL on the publicly available Olist e-commerce dataset from Kaggle. The dataset contains information about orders, customers, sellers, products, payments, and reviews from a Brazilian e-commerce platform. The goal is to extract meaningful insights by analyzing customer behavior, sales trends, product performance, and order dynamics.
+
 # Dataset Source and Overview
 
 For this analysis, I used the publicly available Olist dataset from Kaggle, which can be found[here](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce). Below is the schema illustrating the relationships between the tables:
