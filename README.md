@@ -31,9 +31,9 @@ The schema code can be found [here](Codes/Schema.sql).
 
 # Tools Used
 
-SQL
+SQL: Structured Query Language for data querying.
 
-PostgreSQL
+PostgreSQL: The relational database management system (RDBMS) used to store and analyze the data.
 
 # Key Questions
 
