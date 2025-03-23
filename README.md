@@ -7,18 +7,17 @@ AUTHORS: Meysam Motaharfar
 
 # Table of Contents
 1. [Project Overview](#Project-Overview)
-2. [Key Features](#Key-Features)
-3. [Dataset Sources and Overview](#Dataset-Source-And-Overview)
-4. [Tools Used](#Tools-Used)
-5. [Key Questions](#Key-Questions)
-6. [Key Insights](#Key-Insights)
-7. [Conclusions](#Conclusions)
+2. [Dataset Source and Overview](#Dataset-Source-And-Overview)
+3. [Tools Used](#Tools-Used)
+4. [Key Questions](#Key-Questions)
+5. [Key Insights](#Key-Insights)
+6. [Conclusions](#Conclusions)
 
 # Project Overview
 
-# Key Features
+# Dataset Source and Overview
 
-# Data Source 
+For this analysis, I used the publicly available Olist dataset from Kaggle, which can be found[here](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce). Below is the schema illustrating the relationships between the tables:
 
 </br>
 <div style="text-align: center;">
