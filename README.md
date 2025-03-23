@@ -1,4 +1,4 @@
-Olist
+Olist-SQL-Project (In Progress)
 ================================================
 
 Exploratory Data Analysis (EDA)
