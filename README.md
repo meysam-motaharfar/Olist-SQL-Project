@@ -27,7 +27,7 @@ For this analysis, I used the publicly available Olist dataset from Kaggle, whic
 </div>
 </br>
 
-The code for schema can be found [here](Codes/Schema.sql)
+The schema code can be found [here](Codes/Schema.sql).
 
 # Tools Used
 
