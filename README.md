@@ -67,6 +67,8 @@ We start by answering questions for each table individually, then progressively 
     
    What percentage of the total customer base does the top three cities in each state account for?
 
+The queries to answer these questions is available ![here](Codes/Olist-EDA.sql)
+
 # key Insights
 
 # Conclusions
