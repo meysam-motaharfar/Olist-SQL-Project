@@ -39,7 +39,7 @@ PostgreSQL: The relational database management system (RDBMS) used to store and 
 
 # Key Questions
 
-We start by answering questions for each table individually, then progressively introduce more complex queries by combining multiple tables. Here are the questions we address in this project:
+The project begins by addressing fundamental questions about each table individually. We then progressively combine tables to explore more complex queries and derive meaningful insights. The questions addressed in this analysis include:
 
 1) PRODUCT_CATEGORY_NAME_TRANSLATION:
    
