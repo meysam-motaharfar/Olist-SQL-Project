@@ -69,9 +69,11 @@ The project begins by addressing fundamental questions about each table individu
     
    What percentage of the total customer base does the top three cities in each state account for?
 
-The queries to answer these questions are available [here](Codes/Olist-EDA.sql).
+The SQL queries used to answer these questions can be found [here](Codes/Olist-EDA.sql).
 
 # key Insights
+
+Some of the key findings from the analysis include:
 
 # Conclusions
 
