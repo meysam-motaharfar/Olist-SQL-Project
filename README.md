@@ -21,7 +21,7 @@ In this analysis, we focus on answering critical business and data-driven questi
 
 # Dataset Source and Overview
 
-For this analysis, I used the publicly available Olist dataset from Kaggle, which can be found[here](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce). Below is the schema illustrating the relationships between the tables:
+The dataset for this project is publicly available on Kaggle and can be accessed [here](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce). Below is the schema illustrating the relationships between various tables within the dataset:
 
 </br>
 <div style="text-align: center;">
@@ -29,7 +29,7 @@ For this analysis, I used the publicly available Olist dataset from Kaggle, whic
 </div>
 </br>
 
-The schema code can be found [here](Codes/Schema.sql).
+For a deeper understanding of the database schema, the schema code can be found [here](Codes/Schema.sql).
 
 # Tools Used
 
