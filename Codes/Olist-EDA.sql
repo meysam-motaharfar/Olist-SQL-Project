@@ -6,6 +6,12 @@
 -- How many distinct category is there?
 ---------------------------------------------------------------------------------------------------------
 
+SELECT * 
+FROM product_category_name_translation 
+ORDER BY product_category_name;
+
+---------------------------------------------------------------------------------------------------------
+
 SELECT 
 DISTINCT(COUNT(*)) 
 FROM product_category_name_translation;
@@ -24,6 +30,12 @@ FROM product_category_name_translation;
 -- What percentage of the customer base do the top ten states account for?
 -- What are the top three cities with the most customers in each state?
 -- What percentage of the total customer base does the top three cities in each state account for?
+---------------------------------------------------------------------------------------------------------
+
+SELECT * 
+FROM customer 
+LIMIT 10;
+
 ---------------------------------------------------------------------------------------------------------
 
 SELECT COUNT(*) AS no_rows, 
@@ -157,8 +169,14 @@ ORDER BY percent_top_3_cities ASC;
 -- What percentage of the total seller base does the top three cities in each state account for?
 ---------------------------------------------------------------------------------------------------------
 
+SELECT *
+FROM sellers
+LIMIT 10;
+
+---------------------------------------------------------------------------------------------------------
+
 SELECT COUNT(*) AS no_rows, 
-COUNT(DISTINCT(seller_id)) AS no_customer_id,
+COUNT(DISTINCT(seller_id)) AS no_sellers_id,
 COUNT(DISTINCT(seller_city)) AS no_distinct_city,
 COUNT(DISTINCT(seller_id)) / 
     COUNT(DISTINCT(seller_city)) AS avg_sellers_per_city,
@@ -275,13 +293,254 @@ ORDER BY percent_top_3_cities ASC;
 -- 4) PRODUCTS
 -- Questions:
 -- How many products are there?
--- How many values of each column is missing?
--- What are the top ten categories having the heighest product counts?
--- What are the descriptive statistics for name_length?
--- What are the descriptive statistics for description_length?
--- What are the descriptive statistics for photos_quantity?
--- What are the descriptive statistics for weight_g?
--- What are the descriptive statistics for length_cm?
--- What are the descriptive statistics for height_cm?
--- What are the descriptive statistics for width_cm?
+-- Which ten categories have the highest product counts?
+-- What is the volume and density of each product?
+-- What are the top ten categories for the largest, heaviest, and densest products?
+-- What are the descriptive statistics for name_length, description_length, photos_quantity, weight_g, 
+-- length_cm, height_cm, width_cm, volume_cm_cub, and density_g_per_cm_cub?
+-- What are the descriptive statistics for name_length, description_length, photos_quantity, weight_g,
+-- length_cm, height_cm, width_cm, volume_cm_cub, and density_g_per_cm_cub for top ten categories?
+---------------------------------------------------------------------------------------------------------
+
+SELECT *
+FROM products
+LIMIT 10;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+COUNT(*) AS no_rows, 
+COUNT(DISTINCT(product_id)) AS no_product_id,
+COUNT(DISTINCT(product_category_name)) AS no_product_category
+FROM products ;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT
+product_category_name_translation.product_category_name_english,
+COUNT(DISTINCT(product_id)) AS no_prodcuts
+FROM 
+products LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY product_category_name_translation.product_category_name_english
+ORDER BY no_prodcuts DESC
+LIMIT 10;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+product_id,
+product_category_name_translation.product_category_name_english,
+ROUND(product_length_cm*product_height_cm*product_width_cm, 2) AS product_volume_cm_cub,
+ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2) AS product_density_g_per_cm_cub
+FROM products
+LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+product_category_name_translation.product_category_name_english,
+ROUND(AVG(product_weight_g), 2) AS avg_weight_g
+FROM products
+LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY product_category_name_translation.product_category_name_english
+ORDER BY avg_weight_g DESC
+LIMIT 10;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+product_category_name_translation.product_category_name_english,
+ROUND(AVG(product_length_cm*product_height_cm*product_width_cm), 2) AS avg_product_volume_cm_cub
+FROM products
+LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY product_category_name_translation.product_category_name_english
+ORDER BY avg_product_volume_cm_cub DESC
+LIMIT 10;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+product_category_name_translation.product_category_name_english,
+ROUND(AVG(product_weight_g / (product_length_cm*product_height_cm*product_width_cm)), 2) AS avg_density_g_per_cm_cub
+FROM products
+LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY product_category_name_translation.product_category_name_english
+ORDER BY avg_density_g_per_cm_cub DESC
+LIMIT 10;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+'name_lenght' AS variable,
+COUNT(DISTINCT (product_name_lenght)) AS N,
+ROUND(AVG(product_name_lenght), 0) AS mean,
+ROUND(STDDEV(product_name_lenght), 0) AS STD,
+MAX(product_name_lenght) AS max,
+MIN(product_name_lenght) AS min,
+MODE() WITHIN GROUP (ORDER BY product_name_lenght) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_name_lenght) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_name_lenght) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_name_lenght) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_name_lenght) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_name_lenght) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'description_lenght' AS variable,
+COUNT(DISTINCT (product_description_lenght)) AS N,
+ROUND(AVG(product_description_lenght), 0) AS mean,
+ROUND(STDDEV(product_description_lenght), 0) AS STD,
+MAX(product_description_lenght) AS max,
+MIN(product_description_lenght) AS min,
+MODE() WITHIN GROUP (ORDER BY product_description_lenght) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_description_lenght) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_description_lenght) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_description_lenght) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_description_lenght) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_description_lenght) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'no_photos' AS variable,
+COUNT(DISTINCT (product_photos_qty)) AS N,
+ROUND(AVG(product_photos_qty), 0) AS mean,
+ROUND(STDDEV(product_photos_qty), 0) AS STD,
+MAX(product_photos_qty) AS max,
+MIN(product_photos_qty) AS min,
+MODE() WITHIN GROUP (ORDER BY product_photos_qty) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_photos_qty) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_photos_qty) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_photos_qty) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_photos_qty) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_photos_qty) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'weight_g' AS variable,
+COUNT(DISTINCT (product_weight_g)) AS N,
+ROUND(AVG(product_weight_g), 0) AS mean,
+ROUND(STDDEV(product_weight_g), 0) AS STD,
+MAX(product_weight_g) AS max,
+MIN(product_weight_g) AS min,
+MODE() WITHIN GROUP (ORDER BY product_weight_g) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_weight_g) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_weight_g) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_weight_g) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_weight_g) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_weight_g) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'length_cm' AS variable,
+COUNT(DISTINCT (product_length_cm)) AS N,
+ROUND(AVG(product_length_cm), 0) AS mean,
+ROUND(STDDEV(product_length_cm), 0) AS STD,
+MAX(product_length_cm) AS max,
+MIN(product_length_cm) AS min,
+MODE() WITHIN GROUP (ORDER BY product_length_cm) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_length_cm) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_length_cm) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_length_cm) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_length_cm) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_length_cm) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'height_cm' AS variable,
+COUNT(DISTINCT (product_height_cm)) AS N,
+ROUND(AVG(product_height_cm), 0) AS mean,
+ROUND(STDDEV(product_height_cm), 0) AS STD,
+MAX(product_height_cm) AS max,
+MIN(product_height_cm) AS min,
+MODE() WITHIN GROUP (ORDER BY product_height_cm) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_height_cm) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_height_cm) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_height_cm) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_height_cm) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_height_cm) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'width_cm' AS variable,
+COUNT(DISTINCT (product_width_cm)) AS N,
+ROUND(AVG(product_width_cm), 0) AS mean,
+ROUND(STDDEV(product_width_cm), 0) AS STD,
+MAX(product_width_cm) AS max,
+MIN(product_width_cm) AS min,
+MODE() WITHIN GROUP (ORDER BY product_width_cm) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_width_cm) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_width_cm) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_width_cm) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_width_cm) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_width_cm) AS "99_percentile"
+FROM products
+UNION
+SELECT 
+'volume_cm_cub' AS variable,
+COUNT(DISTINCT (product_volume_cm_cub)) AS N,
+ROUND(AVG(product_volume_cm_cub), 0) AS mean,
+ROUND(STDDEV(product_volume_cm_cub), 0) AS STD,
+MAX(product_volume_cm_cub) AS max,
+MIN(product_volume_cm_cub) AS min,
+MODE() WITHIN GROUP (ORDER BY product_volume_cm_cub) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "99_percentile"
+FROM
+(SELECT
+product_length_cm*product_height_cm*product_width_cm AS product_volume_cm_cub
+FROM products
+LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name) calculated_volume
+UNION
+SELECT 
+'density_g_per_cm_cub' AS variable,
+COUNT(DISTINCT (product_density_g_per_cm_cub)) AS N,
+ROUND(AVG(product_density_g_per_cm_cub), 0) AS mean,
+ROUND(STDDEV(product_density_g_per_cm_cub), 0) AS STD,
+MAX(product_density_g_per_cm_cub) AS max,
+MIN(product_density_g_per_cm_cub) AS min,
+MODE() WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "99_percentile"
+FROM
+(SELECT product_id,
+product_weight_g / (product_length_cm*product_height_cm*product_width_cm) AS product_density_g_per_cm_cub
+FROM products
+LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name) calculated_volume;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT
+product_category_name_translation.product_category_name_english,
+COUNT(DISTINCT(product_id)) AS no_prodcuts,
+COUNT(DISTINCT (product_name_lenght)) AS N,
+ROUND(AVG(product_name_lenght), 0) AS mean,
+ROUND(STDDEV(product_name_lenght), 0) AS STD,
+MAX(product_name_lenght) AS max,
+MIN(product_name_lenght) AS min,
+MODE() WITHIN GROUP (ORDER BY product_name_lenght) AS mode,
+PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_name_lenght) AS "01_percentile",
+PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_name_lenght) AS "25_percentile",
+PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_name_lenght) AS median,
+PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_name_lenght) AS "75_percentile",
+PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_name_lenght) AS "99_percentile"
+FROM 
+products LEFT JOIN product_category_name_translation 
+ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY product_category_name_translation.product_category_name_english
+ORDER BY no_prodcuts DESC
+LIMIT 10;
+
 ---------------------------------------------------------------------------------------------------------
