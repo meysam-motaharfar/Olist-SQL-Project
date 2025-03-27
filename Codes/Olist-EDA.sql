@@ -165,39 +165,36 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
--- Calculate the percentage of customers in the top 3 cities for each state
 SELECT 
-    ranked_cities.customer_state,  -- Select the state column
-    SUM(no_customers) * 100.0 / total_customers AS percent_top_3_cities  -- Calculate the percentage of customers in the top 3 cities
+    ranked_cities.customer_state, 
+    SUM(no_customers) * 100.0 / total_customers AS percent_top_3_cities
 FROM (
-    -- Subquery to calculate the number of customers and rank cities within each state
     SELECT 
-        customer_state,  -- Select the state column
-        customer_city,  -- Select the city column
-        COUNT(DISTINCT(customer_unique_id)) AS no_customers,  -- Count distinct customers per city
-        RANK() OVER (PARTITION BY customer_state ORDER BY COUNT(customer_unique_id) DESC) AS city_rank  -- Rank cities by customer count within each state
+        customer_state, 
+        customer_city, 
+        COUNT(DISTINCT(customer_unique_id)) AS no_customers, 
+        RANK() OVER (PARTITION BY customer_state ORDER BY COUNT(customer_unique_id) DESC) AS city_rank
     FROM 
-        customer  -- From the customer table
+        customer
     GROUP BY 
-        customer_state, customer_city  -- Group by both state and city
-) ranked_cities  -- Alias for the subquery
+        customer_state, customer_city
+) ranked_cities
 JOIN (
-    -- Subquery to calculate the total number of customers per state
     SELECT 
-        customer_state,  -- Select the state column
-        COUNT(DISTINCT(customer_unique_id)) AS total_customers  -- Count distinct customers per state
+        customer_state, 
+        COUNT(DISTINCT(customer_unique_id)) AS total_customers
     FROM 
-        customer  -- From the customer table
+        customer
     GROUP BY 
-        customer_state  -- Group by state
-) total_customers_per_state  -- Alias for the subquery
-ON ranked_cities.customer_state = total_customers_per_state.customer_state  -- Join on customer state
+        customer_state
+) total_customers_per_state
+ON ranked_cities.customer_state = total_customers_per_state.customer_state
 WHERE 
-    city_rank <= 3  -- Filter to keep only the top 3 cities per state
+    city_rank <= 3
 GROUP BY 
-    ranked_cities.customer_state, total_customers  -- Group by state and total customers per state
+    ranked_cities.customer_state, total_customers
 ORDER BY 
-    percent_top_3_cities ASC;  -- Order by percentage of customers in top 3 cities (ascending)
+    percent_top_3_cities ASC;
 
 ---------------------------------------------------------------------------------------------------------
 -- 2) SELLERS
