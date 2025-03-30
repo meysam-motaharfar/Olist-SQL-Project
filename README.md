@@ -41,33 +41,47 @@ PostgreSQL: The relational database management system (RDBMS) used to store and 
 
 The project begins by addressing fundamental questions about each table individually. We then progressively combine tables to explore more complex queries and derive meaningful insights. The questions addressed in this analysis include:
 
-1) PRODUCT_CATEGORY_NAME_TRANSLATION:
-   
-   How many distinct category is there?
+**1) Product Categories**
 
-2) CUSTOMERS
+Distinct Product Categories: Identifying the number of unique product categories available on the platform.
 
-   How many customers are there?
-    
-   How many distinct cities and states are there?
-    
-   What is the average number of customers per city or state?
-    
-   Which are the top ten cities with the most customers?
-    
-   How many cities have more than 500 customers?
-    
-   Which are the top ten states with the most customers?
-    
-   How many cities are there per state?
-    
-   What percentage of the customer base do the top ten cities account for?
-    
-   What percentage of the customer base do the top ten states account for?
-    
-   What are the top three cities with the most customers in each state?
-    
-   What percentage of the total customer base does the top three cities in each state account for?
+**2) Customers**
+
+Customer Demographics: Analyzing the total number of customers and their geographic distribution across cities and states.
+
+Customer Distribution: Understanding the average number of customers per city/state, and identifying the top cities/states by customer count.
+
+Top Cities/States: Identifying the cities and states with the highest concentration of customers, as well as the top three cities per state.
+
+Customer Concentration: Measuring the percentage of the total customer base located in the top ten cities and states.
+
+**3) Sellers**
+
+Seller Demographics: Analyzing the total number of sellers and their geographic distribution across cities and states.
+
+Seller Distribution: Identifying the top cities and states with the highest concentration of sellers, and the top three cities per state.
+
+Seller Concentration: Measuring the percentage of the total seller base in the top ten cities and states.
+
+**4) Products**
+
+Product Overview: Analyzing the total number of products and identifying the top ten categories with the highest product counts.
+
+Product Characteristics: Examining various product attributes such as volume, density, weight, and dimensions, along with descriptive statistics for these features.
+
+Top Categories by Product Characteristics: Identifying which product categories have the largest, heaviest, and densest products, and examining descriptive statistics for product attributes within the top ten categories.
+
+**5) Orders**
+
+Order Delivery Insights: Analyzing the overall delivery rate, how it changes over time, and delivery efficiency across years, quarters, and months.
+
+Purchase Timing: Examining when customers are most likely to make purchases based on the time of day.
+
+Approval and Delivery Times: Measuring the average approval time and carrier delivery time, and how these metrics change over time.
+
+Order Delivery Accuracy: Analyzing how accurate the estimated delivery date is, and how it changes across different time periods.
+
+Delivery Patterns: Identifying the most frequent purchase days, delivery days, and understanding how delivery and purchase behaviors shift over time.
 
 The SQL queries used to answer these questions can be found [here](Codes/Olist-EDA.sql).
 
