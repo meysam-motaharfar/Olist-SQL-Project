@@ -910,25 +910,20 @@ ORDER BY
 LIMIT 
 	10;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 -- 5) ORDERS
 -- Questions:
--- What is the delivery rate?
--- What is the period of all orders?
--- How does the delivery rate changes over years, quarters, and months?
--- When do customers usually make the purchase during the day?
--- What is the average approval time?
--- How does the average approval time change over time?
--- What is the average carrier delivered time since approval?
--- How does the average carrier delivered time change over time?
--- What is the average delivery time of the carrier?
--- How does the average delivery time of the carrier change over time?
--- What are the most frequent purchase days of customers during the week?
--- What are the most frequent delivered hours during the day?
--- What are the most frequent deliverd days during the week?
--- How accurate is the estimated delivery date?
--- How does the accuracy change over time?
--------------------------------------------------------------------------------------------------------------------------------------------
+-- What is the overall delivery rate?
+-- For how many years do the orders span?
+-- How does the delivery rate change across years, quarters, and months?
+-- When are customers most likely to make purchases during the day (hour of the day)?
+-- What is the average approval time, and how does it change across years, quarters, and months?
+-- What is the average carrier delivery time since approval, and how does it change over years, quarters, and months?
+-- What is the average delivery time of the carrier, and how does it change across years, quarters, and months?
+-- What are the most frequent purchase days of the week?
+-- What are the most frequent delivery days of the week?
+-- How accurate is the estimated delivery date, and how does this accuracy change over time (years, quarters, and months)?
+---------------------------------------------------------------------------------------------------------
 
 SELECT * 
 FROM 
@@ -936,7 +931,7 @@ FROM
 LIMIT 
 	10;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
 SELECT 
 	COUNT(*) AS no_rows,
@@ -951,7 +946,7 @@ SELECT
 FROM 
 	orders;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
 SELECT 
     order_status,
@@ -967,14 +962,14 @@ FROM
 	ORDER BY 
 		percent_of_status DESC;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
 SELECT 
 	DISTINCT(DATE_PART('year', order_purchase_timestamp)) AS number_of_years
 FROM 
 	orders;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
 SELECT 
 	counted_total_order_status.year,
@@ -1004,7 +999,7 @@ WHERE
 ORDER BY 
 	year;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
 SELECT 
     counted_total_order_status.year,
@@ -1039,7 +1034,7 @@ WHERE
 ORDER BY 
 	year, quarter;
 
--------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
 SELECT 
     counted_total_order_status.year,
@@ -1073,3 +1068,293 @@ WHERE
 	counted_sub_total_order_status.order_status = 'delivered'
 ORDER BY
 	year, month;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('hour', order_purchase_timestamp) AS purchase_hour, 
+	COUNT(order_id) AS no_purchase_per_hour
+FROM 
+	orders
+GROUP BY 
+	purchase_hour
+ORDER BY 
+	no_purchase_per_hour DESC;
+	
+---------------------------------------------------------------------------------------------------------
+	
+SELECT 
+    AVG(order_approved_at - order_purchase_timestamp) AS avg_approve_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_approved_at) AS year, 
+    AVG(order_approved_at - order_purchase_timestamp) AS avg_approve_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+GROUP BY 
+	year
+ORDER BY 
+	year;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_approved_at) AS year, 
+	DATE_PART('quarter', order_approved_at) AS quarter,
+    AVG(order_approved_at - order_purchase_timestamp) AS avg_approve_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+GROUP BY 
+	year, quarter
+ORDER BY
+	year, quarter;
+
+---------------------------------------------------------------------------------------------------------
+	
+SELECT 
+    DATE_PART('year', order_approved_at) AS year, 
+	DATE_PART('month', order_approved_at) AS month,
+    AVG(order_approved_at - order_purchase_timestamp) AS avg_approve_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+GROUP BY 
+	year, month
+ORDER BY
+	year, month;
+
+---------------------------------------------------------------------------------------------------------
+	
+SELECT 
+    AVG(order_delivered_carrier_date - order_approved_at) AS avg_delivered_carrier_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+AND
+	order_delivered_carrier_date IS NOT NULL;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_approved_at) AS year, 
+    AVG(order_delivered_carrier_date - order_approved_at) AS avg_delivered_carrier_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+AND
+	order_delivered_carrier_date IS NOT NULL
+GROUP BY 
+	year
+ORDER BY 
+	year;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_approved_at) AS year,
+	DATE_PART('quarter', order_approved_at) AS quarter,
+    AVG(order_delivered_carrier_date - order_approved_at) AS avg_delivered_carrier_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+AND
+	order_delivered_carrier_date IS NOT NULL
+GROUP BY 
+	year, quarter
+ORDER BY 
+	year, quarter;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_approved_at) AS year,
+	DATE_PART('month', order_approved_at) AS month,
+    AVG(order_delivered_carrier_date - order_approved_at) AS avg_delivered_carrier_time
+FROM 
+	orders
+WHERE 
+	order_approved_at IS NOT NULL
+AND
+	order_delivered_carrier_date IS NOT NULL
+GROUP BY 
+	year, month
+ORDER BY 
+	year, month;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    AVG(order_delivered_customer_date - order_delivered_carrier_date) AS avg_delivered_customer_time
+FROM 
+	orders
+WHERE 
+	order_delivered_carrier_date IS NOT NULL
+AND
+	order_delivered_customer_date IS NOT NULL;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_delivered_carrier_date) AS year, 
+    AVG(order_delivered_customer_date - order_delivered_carrier_date) AS avg_delivered_customer_time
+FROM 
+	orders
+WHERE 
+	order_delivered_carrier_date IS NOT NULL
+AND
+	order_delivered_customer_date IS NOT NULL
+GROUP BY 
+	year
+ORDER BY 
+	year;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    DATE_PART('year', order_delivered_carrier_date) AS year, 
+	DATE_PART('quarter', order_delivered_carrier_date) AS quarter,
+    AVG(order_delivered_customer_date - order_delivered_carrier_date) AS avg_delivered_customer_time
+FROM 
+	orders
+WHERE 
+	order_delivered_carrier_date IS NOT NULL
+AND
+	order_delivered_customer_date IS NOT NULL
+GROUP BY 
+	year, quarter
+ORDER BY 
+	year, quarter;
+
+---------------------------------------------------------------------------------------------------------
+	
+SELECT 
+    DATE_PART('year', order_delivered_carrier_date) AS year, 
+	DATE_PART('month', order_delivered_carrier_date) AS month,
+    AVG(order_delivered_customer_date - order_delivered_carrier_date) AS avg_delivered_customer_time
+FROM 
+	orders
+WHERE 
+	order_delivered_carrier_date IS NOT NULL
+AND
+	order_delivered_customer_date IS NOT NULL
+GROUP BY 
+	year, month
+ORDER BY 
+	year, month;
+	
+---------------------------------------------------------------------------------------------------------
+	
+SELECT 
+    TO_CHAR(order_purchase_timestamp, 'Day') AS day_of_week,
+	COUNT(order_id) AS no_orders
+FROM 
+	orders
+GROUP BY
+	day_of_week
+ORDER BY
+	no_orders DESC;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT
+	DATE_pART('hour', order_delivered_customer_date) AS order_delivered_customer_hour,
+	COUNT (order_id) AS no_orders
+FROM
+	orders
+WHERE 
+	order_delivered_customer_date IS NOT NULL
+GROUP BY 
+	order_delivered_customer_hour
+ORDER BY 
+	no_orders DESC;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    TO_CHAR(order_delivered_customer_date, 'Day') AS day_of_week,
+	COUNT(order_id) AS no_orders
+FROM 
+	orders
+WHERE 
+	order_delivered_customer_date IS NOT NULL
+GROUP BY
+	day_of_week
+ORDER BY
+	no_orders DESC;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    ROUND(SUM(CASE WHEN order_delivered_customer_date < order_estimated_delivery_date THEN 1 ELSE 0 END) * 100.0 /COUNT(order_delivered_customer_date), 1) AS estimated_accuracy
+FROM 
+	orders
+WHERE 
+    order_delivered_customer_date IS NOT NULL
+AND 
+	order_estimated_delivery_date IS NOT NULL;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('year', order_delivered_customer_date) AS year,
+    ROUND(SUM(CASE WHEN order_delivered_customer_date < order_estimated_delivery_date THEN 1 ELSE 0 END) * 100.0 /COUNT(order_delivered_customer_date), 1) AS estimated_accuracy
+FROM 
+	orders
+WHERE 
+    order_delivered_customer_date IS NOT NULL
+AND 
+	order_estimated_delivery_date IS NOT NULL
+GROUP BY
+	year
+ORDER BY 
+	year;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('year', order_delivered_customer_date) AS year,
+	DATE_PART('quarter', order_delivered_customer_date) AS quarter,
+    ROUND(SUM(CASE WHEN order_delivered_customer_date < order_estimated_delivery_date THEN 1 ELSE 0 END) * 100.0 /COUNT(order_delivered_customer_date), 1) AS estimated_accuracy
+FROM 
+	orders
+WHERE 
+    order_delivered_customer_date IS NOT NULL
+AND 
+	order_estimated_delivery_date IS NOT NULL
+GROUP BY
+	year, quarter
+ORDER BY 
+	year, quarter;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('year', order_delivered_customer_date) AS year,
+	DATE_PART('month', order_delivered_customer_date) AS month,
+    ROUND(SUM(CASE WHEN order_delivered_customer_date < order_estimated_delivery_date THEN 1 ELSE 0 END) * 100.0 /COUNT(order_delivered_customer_date), 1) AS estimated_accuracy
+FROM 
+	orders
+WHERE 
+    order_delivered_customer_date IS NOT NULL
+AND 
+	order_estimated_delivery_date IS NOT NULL
+GROUP BY
+	year, month
+ORDER BY 
+	year, month;
+
+---------------------------------------------------------------------------------------------------------
