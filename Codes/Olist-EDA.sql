@@ -1358,3 +1358,212 @@ ORDER BY
 	year, month;
 
 ---------------------------------------------------------------------------------------------------------
+-- 6) ORDER ITEMS:
+-- Questions:
+-- What are top 10 most expensive products and shiping cost?
+-- What is the ratio of total products sold to the total number of orders (product-order ratio)?
+-- Which sellers account for more than 1% of the total orders placed?
+-- What are the descriptive statistics (mean, median, min, max, standard deviation) for the product prices?
+-- What are the descriptive statistics (mean, median, min, max, standard deviation) for freight (shipping) value?
+---------------------------------------------------------------------------------------------------------
+
+SELECT *
+FROM 
+	order_items
+ORDER BY 
+	price DESc
+LIMIT 
+	10;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT *
+FROM 
+	order_items
+ORDER BY 
+	freight_value DESc
+LIMIT 
+	10;
+	
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	COUNT(DISTINCT order_id) as no_orders,
+	COUNT(DISTINCT product_id) as no_products,
+	ROUND(COUNT(DISTINCT order_id) / COUNT(DISTINCT product_id) :: NUMERIC, 2) AS product_order_ratio
+FROM 
+	order_items;
+
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	seller_id,
+	ROUND(no_product * 100.0 / SUM(no_product) OVER (), 2) AS percent_share
+FROM
+	(SELECT 
+		seller_id,
+		COUNT(product_id)  as no_product
+	FROM 
+	 	order_items
+	GROUP BY 
+	 	seller_id
+	ORDER BY 
+	 	no_product DESC
+	) AS counting_product;
+	
+--------------------------------------------------------------------------------------------------------
+	
+SELECT 
+	'price' AS price,
+	SUM(price) AS total,
+	COUNT(DISTINCT (price)) AS N,
+	ROUND(AVG(price), 0) AS mean,
+	ROUND(STDDEV(price), 0) AS STD,
+	MAX(price) AS max,
+	MIN(price) AS min,
+	MODE() WITHIN GROUP (ORDER BY price) AS mode,
+	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY price) AS "01_percentile",
+	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY price) AS "25_percentile",
+	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY price) AS median,
+	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY price) AS "75_percentile",
+	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY price) AS "99_percentile"
+FROM 
+	order_items
+UNION
+SELECT 
+	'freight_value' AS freight_value,
+	SUM(freight_value) AS total,
+	COUNT(DISTINCT (freight_value)) AS N,
+	ROUND(AVG(freight_value), 0) AS mean,
+	ROUND(STDDEV(freight_value), 0) AS STD,
+	MAX(freight_value) AS max,
+	MIN(freight_value) AS min,
+	MODE() WITHIN GROUP (ORDER BY freight_value) AS mode,
+	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY freight_value) AS "01_percentile",
+	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY freight_value) AS "25_percentile",
+	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY freight_value) AS median,
+	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY freight_value) AS "75_percentile",
+	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY freight_value) AS "99_percentile"
+FROM 
+	order_items;
+
+--------------------------------------------------------------------------------------------------------
+-- 7) ORDER PAYMENTS:
+-- Questions:
+-- What are the shares of payment types?
+-- What are the descriptive statistics of payment_sequential?
+-- What are the descriptive statistics of payment_installments?
+-- What are the descriptive statistics of payment_value?
+-- What is the total value of the top 1% order in terms of payment_value?
+--------------------------------------------------------------------------------------------------------
+
+SELECT *
+FROM 
+	order_payments
+LIMIT 
+	10;
+
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	payment_type,
+	ROUND(no_payment_type * 100.0 / SUM(no_payment_type) OVER (), 2) AS share_of_payment_type
+FROM 
+	(SELECT 
+		payment_type,
+		COUNT(order_id)  AS no_payment_type
+	FROM 
+		order_payments
+	GROUP BY
+		payment_type
+	ORDER BY 
+		no_payment_type DESC) AS counting_payment_type;
+		
+--------------------------------------------------------------------------------------------------------	
+		
+SELECT 
+	'payment_sequential' AS payment_sequential,
+	COUNT(DISTINCT (payment_sequential)) AS N,
+	ROUND(AVG(payment_sequential), 0) AS mean,
+	ROUND(STDDEV(payment_sequential), 0) AS STD,
+	MAX(payment_sequential) AS max,
+	MIN(payment_sequential) AS min,
+	MODE() WITHIN GROUP (ORDER BY payment_sequential) AS mode,
+	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY payment_sequential) AS "01_percentile",
+	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY payment_sequential) AS "25_percentile",
+	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY payment_sequential) AS median,
+	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY payment_sequential) AS "75_percentile",
+	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY payment_sequential) AS "99_percentile"
+FROM 
+	order_payments
+UNION
+SELECT 
+	'payment_installments' AS payment_installments,
+	COUNT(DISTINCT (payment_installments)) AS N,
+	ROUND(AVG(payment_installments), 0) AS mean,
+	ROUND(STDDEV(payment_installments), 0) AS STD,
+	MAX(payment_installments) AS max,
+	MIN(payment_installments) AS min,
+	MODE() WITHIN GROUP (ORDER BY payment_installments) AS mode,
+	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY payment_installments) AS "01_percentile",
+	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY payment_installments) AS "25_percentile",
+	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY payment_installments) AS median,
+	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY payment_installments) AS "75_percentile",
+	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY payment_installments) AS "99_percentile"
+FROM 
+	order_payments
+UNION
+SELECT 
+	'payment_value' AS payment_value,
+	COUNT(DISTINCT (payment_value)) AS N,
+	ROUND(AVG(payment_value), 0) AS mean,
+	ROUND(STDDEV(payment_value), 0) AS STD,
+	MAX(payment_value) AS max,
+	MIN(payment_value) AS min,
+	MODE() WITHIN GROUP (ORDER BY payment_value) AS mode,
+	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY payment_value) AS "01_percentile",
+	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY payment_value) AS "25_percentile",
+	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY payment_value) AS median,
+	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY payment_value) AS "75_percentile",
+	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY payment_value) AS "99_percentile"
+FROM 
+	order_payments;
+
+--------------------------------------------------------------------------------------------------------
+-- 8) ORDER REVIEWS:
+-- Questions:
+-- What are the descriptive statistics of rating?
+-- What is the average answering time?
+-- How does the average answer time change over time?
+--------------------------------------------------------------------------------------------------------
+
+SELECT *
+FROM
+	order_reviews
+LIMIT 
+	10;
+
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	'review_score' AS review_score,
+	COUNT(DISTINCT (review_score)) AS N,
+	ROUND(AVG(review_score), 0) AS mean,
+	ROUND(STDDEV(review_score), 0) AS STD,
+	MAX(review_score) AS max,
+	MIN(review_score) AS min,
+	MODE() WITHIN GROUP (ORDER BY review_score) AS mode,
+	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY review_score) AS "01_percentile",
+	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY review_score) AS "25_percentile",
+	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY review_score) AS median,
+	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY review_score) AS "75_percentile",
+	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY review_score) AS "99_percentile"
+FROM 
+	order_reviews;
+	
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	AVG(review_answer_timestamp -  review_creation_date) AS AVG_answering_time
+FROM
+	order_reviews;
