@@ -6,9 +6,11 @@
 -- How many distinct category is there?
 ---------------------------------------------------------------------------------------------------------
 
-SELECT * 
+SELECT 
+	* 
 	FROM product_category_name_translation 
-LIMIT 10;
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -31,9 +33,12 @@ FROM product_category_name_translation;
 -- What percentage of the total customer base do the top three cities in each state represent?
 ---------------------------------------------------------------------------------------------------------
 
-SELECT * 
-	FROM customer 
-LIMIT 10;
+SELECT 
+	* 
+FROM 
+	customer 
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -59,7 +64,8 @@ GROUP BY
     customer_city  
 ORDER BY 
     no_customers DESC  
-LIMIT 10;
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -87,7 +93,8 @@ GROUP BY
     customer_state
 ORDER BY 
     no_customers DESC
-LIMIT 10;
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -118,7 +125,8 @@ FROM (
         customer_city
     ORDER BY 
         no_customers DESC
-    LIMIT 10
+    LIMIT 
+		10
 ) AS top_ten_cities;
 
 ---------------------------------------------------------------------------------------------------------
@@ -138,7 +146,8 @@ FROM (
         customer_state
     ORDER BY 
         no_customers DESC
-    LIMIT 10
+    LIMIT 
+		10
 ) AS top_ten_states;
 
 ---------------------------------------------------------------------------------------------------------
@@ -212,9 +221,12 @@ ORDER BY
 -- What percentage of the total seller base does the top three cities in each state account for?
 ---------------------------------------------------------------------------------------------------------
 
-SELECT *
-	FROM sellers
-LIMIT 10;
+SELECT 
+	*
+FROM 
+	sellers
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -225,7 +237,8 @@ SELECT
     COUNT(DISTINCT seller_id) / COUNT(DISTINCT seller_city) AS avg_sellers_per_city,
     COUNT(DISTINCT seller_state) AS no_distinct_state,
     COUNT(DISTINCT seller_id) / COUNT(DISTINCT seller_state) AS avg_sellers_per_state
-FROM sellers;
+FROM 
+	sellers;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -238,7 +251,8 @@ GROUP BY
     seller_city
 ORDER BY 
     no_sellers DESC
-LIMIT 10;
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -1451,13 +1465,12 @@ FROM
 -- 7) ORDER PAYMENTS:
 -- Questions:
 -- What are the shares of payment types?
--- What are the descriptive statistics of payment_sequential?
--- What are the descriptive statistics of payment_installments?
--- What are the descriptive statistics of payment_value?
+-- What are the descriptive statistics of payment_sequential, payment_installments, and payment_value?
 -- What is the total value of the top 1% order in terms of payment_value?
 --------------------------------------------------------------------------------------------------------
 
-SELECT *
+SELECT 
+	*
 FROM 
 	order_payments
 LIMIT 
@@ -1530,19 +1543,53 @@ FROM
 	order_payments;
 
 --------------------------------------------------------------------------------------------------------
+
+SELECT 
+	SUM(total_value) AS top_1_percent_total_value
+FROM
+	(SELECT 
+		order_id,
+		total_value,
+		NTILE(100) OVER (ORDER BY total_value DESC) AS percentile
+	FROM 
+		(SELECT 
+			order_id,
+			SUM(payment_value) AS total_value
+		FROM
+			order_payments
+		GROUP BY 
+			order_id
+		ORDER BY 
+			total_value DESC) order_total) ranked_orders
+WHERE 
+	percentile = 1;
+
+--------------------------------------------------------------------------------------------------------
 -- 8) ORDER REVIEWS:
 -- Questions:
 -- What are the descriptive statistics of rating?
+-- How the rating change over time?
+-- How many comment title and comment message is missing?
 -- What is the average answering time?
 -- How does the average answer time change over time?
 --------------------------------------------------------------------------------------------------------
 
-SELECT *
+SELECT 
+	*
 FROM
 	order_reviews
 LIMIT 
 	10;
+	
+--------------------------------------------------------------------------------------------------------
 
+SELECT 
+	COUNT(order_id) AS no_orders,
+	COUNT(order_id) - COUNT(review_comment_title) AS no_missing_comment_title,
+	COUNT(order_id) - COUNT(review_comment_message) AS no_missing_comment_message
+FROM
+	order_reviews;
+	
 --------------------------------------------------------------------------------------------------------
 
 SELECT 
@@ -1564,6 +1611,75 @@ FROM
 --------------------------------------------------------------------------------------------------------
 
 SELECT 
+	DATE_PART('year', review_answer_timestamp) AS year,
+	AVG(review_score) AS avg_rating
+FROM
+	order_reviews
+GROUP BY 
+	year
+ORDER BY 
+	year ASC;
+	
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('year', review_answer_timestamp) AS year,
+	DATE_PART('quarter', review_answer_timestamp) AS quarter,
+	AVG(review_score) AS avg_rating
+FROM
+	order_reviews
+GROUP BY 
+	year, quarter
+ORDER BY 
+	year, quarter ASC;
+	
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('year', review_answer_timestamp) AS year,
+	DATE_PART('month', review_answer_timestamp) AS month,
+	AVG(review_score) AS avg_rating
+FROM
+	order_reviews
+GROUP BY 
+	year, month
+ORDER BY 
+	year, month ASC;
+
+--------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('year', review_creation_date) AS year,
 	AVG(review_answer_timestamp -  review_creation_date) AS AVG_answering_time
 FROM
-	order_reviews;
+	order_reviews
+GROUP BY 
+	year
+ORDER BY 
+	year ASC;
+	
+--------------------------------------------------------------------------------------------------------
+	
+SELECT 
+	DATE_PART('year', review_creation_date) AS year,
+	DATE_PART('quarter', review_creation_date) AS quarter,
+	AVG(review_answer_timestamp -  review_creation_date) AS AVG_answering_time
+FROM
+	order_reviews
+GROUP BY 
+	year, quarter
+ORDER BY 
+	year, quarter ASC;
+
+--------------------------------------------------------------------------------------------------------
+	
+SELECT 
+	DATE_PART('year', review_creation_date) AS year,
+	DATE_PART('month', review_creation_date) AS month,
+	AVG(review_answer_timestamp -  review_creation_date) AS AVG_answering_time
+FROM
+	order_reviews
+GROUP BY 
+	year, month
+ORDER BY 
+	year, month ASC;
