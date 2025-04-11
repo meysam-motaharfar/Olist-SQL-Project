@@ -15,8 +15,9 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-	DISTINCT(COUNT(*)) 
-FROM product_category_name_translation;
+	DISTINCT(COUNT(*)) AS no_distinct_category
+FROM 
+	product_category_name_translation;
 
 ---------------------------------------------------------------------------------------------------------
 -- 2) CUSTOMERS
@@ -27,6 +28,7 @@ FROM product_category_name_translation;
 -- Which are the top ten cities with the most customers?
 -- How many cities have more than 500 customers?
 -- Which are the top ten states with the most customers?
+-- How many states have more than 1000 customers?
 -- How many cities are there in each state?
 -- What percentage of the total customer base do the top ten cities/states represent?
 -- What are the top three cities with the most customers in each state?
@@ -70,7 +72,7 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-    COUNT(*) AS number_of_cities_with_more_than_500_customers 
+    COUNT(*) AS no_of_cities_with_more_than_500_customers 
 FROM (
     SELECT
         customer_city  
@@ -98,6 +100,21 @@ LIMIT
 
 ---------------------------------------------------------------------------------------------------------
 
+SELECT 
+    COUNT(*) AS no_of_states_with_more_than_1000_customers 
+FROM (
+    SELECT
+        customer_state  
+    FROM 
+        customer  
+    GROUP BY 
+        customer_state  
+    HAVING 
+        COUNT(DISTINCT customer_unique_id) > 1000  
+) AS states_with_more_than_1000_customers;
+
+---------------------------------------------------------------------------------------------------------
+
 SELECT
     customer_state,
     COUNT(DISTINCT customer_city) AS no_city_per_state
@@ -112,9 +129,10 @@ ORDER BY
 
 SELECT 
     SUM(no_customers) * 100 / (
-        SELECT COUNT(DISTINCT customer_unique_id)
-        FROM customer
-    ) AS percent_top_10_cities
+		SELECT 
+			COUNT(DISTINCT customer_unique_id) 
+		FROM 
+			customer) AS customer_percentage_of_top_10_cities
 FROM (
     SELECT
         customer_city,
@@ -133,9 +151,11 @@ FROM (
 
 SELECT 
     SUM(no_customers) * 100 / (
-        SELECT COUNT(DISTINCT customer_unique_id)
-        FROM customer
-    ) AS percent_top_10_states
+        SELECT 
+			COUNT(DISTINCT customer_unique_id)
+        FROM 
+			customer
+    ) AS customer_percentage_of_top_10_states
 FROM (
     SELECT
         customer_state,
@@ -176,7 +196,7 @@ ORDER BY
 
 SELECT 
     ranked_cities.customer_state, 
-    SUM(no_customers) * 100.0 / total_customers AS percent_top_3_cities
+    SUM(no_customers) * 100.0 / total_customers AS customer_percentage_of_top_3_cities_in_each_state
 FROM (
     SELECT 
         customer_state, 
@@ -203,10 +223,10 @@ WHERE
 GROUP BY 
     ranked_cities.customer_state, total_customers
 ORDER BY 
-    percent_top_3_cities ASC;
+    customer_percentage_of_top_3_cities_in_each_state ASC;
 
 ---------------------------------------------------------------------------------------------------------
--- 2) SELLERS
+-- 3) SELLERS
 -- Questions:
 -- How many sellers are there?
 -- How many distinct cities and states are there?
