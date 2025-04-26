@@ -8,7 +8,8 @@
 
 SELECT 
 	* 
-	FROM product_category_name_translation 
+FROM 
+	product_category_name_translation 
 LIMIT 
 	10;
 
@@ -127,9 +128,7 @@ ORDER BY
 	
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	top_ten_cities 
-AS (
+WITH top_ten_cities AS (
     SELECT
         customer_city,
         COUNT(DISTINCT customer_unique_id) AS no_customers
@@ -153,9 +152,7 @@ FROM
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	top_ten_states 
-AS (
+WITH top_ten_states AS (
     SELECT
         customer_state,
         COUNT(DISTINCT customer_unique_id) AS no_customers
@@ -180,10 +177,7 @@ FROM
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	ranked_cities 
-AS 
-	(
+WITH ranked_cities AS (
 	SELECT 
 		customer_state, 
 		customer_city, 
@@ -207,9 +201,7 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH ranked_cities 
-	AS 
-	(
+WITH ranked_cities AS (
     SELECT 
         customer_state, 
         customer_city, 
@@ -220,9 +212,7 @@ WITH ranked_cities
     GROUP BY 
 		customer_state, customer_city
 ),
-total_customers_per_state 
-AS
-	(
+total_customers_per_state AS(
     SELECT 
         customer_state, 
         COUNT(DISTINCT customer_unique_id) AS total_customers
@@ -359,18 +349,17 @@ AS
 )
 SELECT 
     SUM(no_sellers) * 100 / (
-        SELECT COUNT(DISTINCT seller_id) 
-        FROM sellers
+        SELECT 
+			COUNT(DISTINCT seller_id) 
+        FROM 
+			sellers
     ) AS percent_top_10_cities
 FROM 
 	top_ten_cities;
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	top_ten_states
-AS
-	(
+WITH top_ten_states AS(
     SELECT
         seller_state,
         COUNT(DISTINCT seller_id) AS no_sellers
@@ -385,18 +374,17 @@ AS
 ) 
 SELECT 
     SUM(no_sellers) * 100 / (
-        SELECT COUNT(DISTINCT seller_id) 
-        FROM sellers
+        SELECT 
+			COUNT(DISTINCT seller_id) 
+        FROM 
+			sellers
     ) AS percent_top_10_states
 FROM 
 	top_ten_states;
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	ranked_cities 
-AS 
-	(
+WITH ranked_cities AS (
     SELECT 
         seller_state, 
         seller_city, 
@@ -420,10 +408,7 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	ranked_cities 
-AS
-	(
+WITH ranked_cities AS(
     SELECT 
         seller_state,
         seller_city, 
@@ -1061,10 +1046,7 @@ FROM
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH 
-	counted_sub_total_order_status
-AS
-	(
+WITH counted_sub_total_order_status AS (
 	SELECT 
 		DATE_PART('year', order_purchase_timestamp) AS year,
 		order_status,
@@ -1073,10 +1055,8 @@ AS
 	 	orders
 	GROUP BY 
 	 	year, order_status
-	),
-	counted_total_order_status
-AS
-	(
+),
+counted_total_order_status AS (
 	SELECT 
 		DATE_PART('year', order_purchase_timestamp) AS year,
 		COUNT(order_status) AS total_order_status
@@ -1084,7 +1064,7 @@ AS
 	 	orders
 	GROUP BY 
 	 	year
-	)
+)
 SELECT 
 	counted_total_order_status.year,
 	total_order_status,
@@ -1102,10 +1082,7 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH  
-	counted_sub_total_order_status
-AS
-	(
+WITH counted_sub_total_order_status AS (
 	SELECT 
         DATE_PART('year', order_purchase_timestamp) AS year,
         DATE_PART('quarter', order_purchase_timestamp) AS quarter,
@@ -1115,10 +1092,8 @@ AS
 	 	orders
     GROUP BY
 	 	year, quarter, order_status
-	),
-	counted_total_order_status
-AS
-    (
+),
+counted_total_order_status AS (
 	SELECT 
         DATE_PART('year', order_purchase_timestamp) AS year,
         DATE_PART('quarter', order_purchase_timestamp) AS quarter,
@@ -1127,7 +1102,7 @@ AS
 	 	orders
     GROUP BY
 	 	year, quarter
-	) 
+) 
 SELECT 
     counted_total_order_status.year,
     counted_total_order_status.quarter,
@@ -1148,10 +1123,7 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-WITH  
-	counted_sub_total_order_status 
-AS
-	(
+WITH counted_sub_total_order_status AS (
 	SELECT 
         DATE_PART('year', order_purchase_timestamp) AS year,
 		DATE_PART('quarter', order_purchase_timestamp) AS quarter,
@@ -1162,10 +1134,8 @@ AS
 	 	orders
     GROUP BY
 	 	year, quarter, month, order_status
-	), 
-	counted_total_order_status
-AS
-    (
+), 
+counted_total_order_status AS (
 		SELECT 
         DATE_PART('year', order_purchase_timestamp) AS year,
 		DATE_PART('quarter', order_purchase_timestamp) AS quarter,
@@ -1175,7 +1145,7 @@ AS
 	 	orders
     GROUP BY
 	 	year, quarter, month
-	) 
+) 
 SELECT 
     counted_total_order_status.year,
     counted_total_order_status.quarter,
@@ -1499,7 +1469,8 @@ ORDER BY
 -- What are the descriptive statistics (mean, median, min, max, standard deviation) for freight (shipping) value?
 ---------------------------------------------------------------------------------------------------------
 
-SELECT *
+SELECT 
+	*
 FROM 
 	order_items
 ORDER BY 
