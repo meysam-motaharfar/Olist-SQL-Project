@@ -32,7 +32,7 @@ FROM
 -- How many cities are there in each state?
 -- What percentage of the total customer base do the top ten cities/states represent?
 -- What are the top three cities with the most customers in each state?
--- What percentage of the total customer base do the top three cities in each state represent?
+-- How much of the total customer base comes from the top 3 cities in each of the top 10 states?
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
@@ -49,9 +49,9 @@ SELECT
     COUNT(DISTINCT customer_id) AS no_customer_id,  
     COUNT(DISTINCT customer_unique_id) AS no_unique_customer_id,  
     COUNT(DISTINCT customer_city) AS no_distinct_city,  
-    COUNT(DISTINCT customer_unique_id) / COUNT(DISTINCT customer_city) AS avg_customers_per_city,  
+    COUNT(DISTINCT customer_unique_id) / COUNT(DISTINCT customer_city) AS customers_per_city,  
     COUNT(DISTINCT customer_state) AS no_distinct_state,  
-    COUNT(DISTINCT customer_unique_id) / COUNT(DISTINCT customer_state) AS avg_customers_per_state  
+    COUNT(DISTINCT customer_unique_id) / COUNT(DISTINCT customer_state) AS customers_per_state  
 FROM 
     customer;
 
@@ -127,13 +127,9 @@ ORDER BY
 	
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    SUM(no_customers) * 100 / (
-		SELECT 
-			COUNT(DISTINCT customer_unique_id) 
-		FROM 
-			customer) AS customer_percentage_of_top_10_cities
-FROM (
+WITH 
+	top_ten_cities 
+AS (
     SELECT
         customer_city,
         COUNT(DISTINCT customer_unique_id) AS no_customers
@@ -145,18 +141,21 @@ FROM (
         no_customers DESC
     LIMIT 
 		10
-) AS top_ten_cities;
+) 
+SELECT 
+    SUM(no_customers) * 100 / (
+		SELECT 
+			COUNT(DISTINCT customer_unique_id) 
+		FROM 
+			customer) AS customer_percentage_of_top_10_cities
+FROM
+	top_ten_cities;
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    SUM(no_customers) * 100 / (
-        SELECT 
-			COUNT(DISTINCT customer_unique_id)
-        FROM 
-			customer
-    ) AS customer_percentage_of_top_10_states
-FROM (
+WITH 
+	top_ten_states 
+AS (
     SELECT
         customer_state,
         COUNT(DISTINCT customer_unique_id) AS no_customers
@@ -168,25 +167,39 @@ FROM (
         no_customers DESC
     LIMIT 
 		10
-) AS top_ten_states;
+)
+SELECT 
+    SUM(no_customers) * 100 / (
+        SELECT 
+			COUNT(DISTINCT customer_unique_id)
+        FROM 
+			customer
+    ) AS customer_percentage_of_top_10_states
+FROM
+	top_ten_states;
 
 ---------------------------------------------------------------------------------------------------------
 
+WITH 
+	ranked_cities 
+AS 
+	(
+	SELECT 
+		customer_state, 
+		customer_city, 
+		COUNT(DISTINCT customer_unique_id) AS no_customers, 
+		RANK() OVER (PARTITION BY customer_state ORDER BY COUNT(customer_unique_id) DESC) AS city_rank
+	FROM 
+		customer
+	GROUP BY 
+		customer_state, customer_city
+) 
 SELECT 
     customer_state, 
     customer_city, 
     no_customers
-FROM (
-    SELECT 
-        customer_state, 
-        customer_city, 
-        COUNT(DISTINCT customer_unique_id) AS no_customers, 
-        RANK() OVER (PARTITION BY customer_state ORDER BY COUNT(customer_unique_id) DESC) AS city_rank
-    FROM 
-        customer
-    GROUP BY 
-        customer_state, customer_city
-) AS ranked_cities
+FROM 
+	ranked_cities
 WHERE 
     city_rank <= 3
 ORDER BY 
@@ -194,10 +207,9 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    ranked_cities.customer_state, 
-    SUM(no_customers) * 100.0 / total_customers AS customer_percentage_of_top_3_cities_in_each_state
-FROM (
+WITH ranked_cities 
+	AS 
+	(
     SELECT 
         customer_state, 
         customer_city, 
@@ -206,9 +218,11 @@ FROM (
     FROM 
         customer
     GROUP BY 
-        customer_state, customer_city
-) AS ranked_cities
-JOIN (
+		customer_state, customer_city
+),
+total_customers_per_state 
+AS
+	(
     SELECT 
         customer_state, 
         COUNT(DISTINCT customer_unique_id) AS total_customers
@@ -216,14 +230,24 @@ JOIN (
         customer
     GROUP BY 
         customer_state
-) AS total_customers_per_state
-ON ranked_cities.customer_state = total_customers_per_state.customer_state
+) 
+SELECT 
+    ranked_cities.customer_state, 
+    SUM(no_customers) * 100.0 / total_customers AS customer_percentage_of_top_3_cities_in_each_state
+FROM 
+	ranked_cities
+JOIN
+	total_customers_per_state 
+ON 
+	ranked_cities.customer_state = total_customers_per_state.customer_state
 WHERE 
     city_rank <= 3
 GROUP BY 
     ranked_cities.customer_state, total_customers
 ORDER BY 
-    customer_percentage_of_top_3_cities_in_each_state ASC;
+	total_customers DESC
+LIMIT
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 -- 3) SELLERS
@@ -238,7 +262,7 @@ ORDER BY
 -- What percentage of the seller base do the top ten cities account for?
 -- What percentage of the seller base do the top ten states account for?
 -- What are the top three cities with the most sellers in each state?
--- What percentage of the total seller base does the top three cities in each state account for?
+-- How much of the total seller base comes from the top 3 cities in each of the top 10 states?
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
@@ -254,9 +278,9 @@ SELECT
     COUNT(*) AS no_rows, 
     COUNT(DISTINCT seller_id) AS no_sellers_id,
     COUNT(DISTINCT seller_city) AS no_distinct_city,
-    COUNT(DISTINCT seller_id) / COUNT(DISTINCT seller_city) AS avg_sellers_per_city,
+    COUNT(DISTINCT seller_id) / COUNT(DISTINCT seller_city) AS sellers_per_city,
     COUNT(DISTINCT seller_state) AS no_distinct_state,
-    COUNT(DISTINCT seller_id) / COUNT(DISTINCT seller_state) AS avg_sellers_per_state
+    COUNT(DISTINCT seller_id) / COUNT(DISTINCT seller_state) AS sellers_per_state
 FROM 
 	sellers;
 
@@ -317,12 +341,10 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    SUM(no_sellers) * 100 / (
-        SELECT COUNT(DISTINCT seller_id) 
-        FROM sellers
-    ) AS percent_top_10_cities
-FROM (
+WITH 
+	top_ten_cities
+AS
+	(
     SELECT
         seller_city,
         COUNT(DISTINCT seller_id) AS no_sellers
@@ -334,16 +356,21 @@ FROM (
 		no_sellers DESC
     LIMIT 
 		10
-) AS top_ten_cities;
-
----------------------------------------------------------------------------------------------------------
-
+)
 SELECT 
     SUM(no_sellers) * 100 / (
         SELECT COUNT(DISTINCT seller_id) 
         FROM sellers
-    ) AS percent_top_10_states
-FROM (
+    ) AS percent_top_10_cities
+FROM 
+	top_ten_cities;
+
+---------------------------------------------------------------------------------------------------------
+
+WITH 
+	top_ten_states
+AS
+	(
     SELECT
         seller_state,
         COUNT(DISTINCT seller_id) AS no_sellers
@@ -355,15 +382,21 @@ FROM (
 		no_sellers DESC
     LIMIT 
 		10
-) AS top_ten_states;
+) 
+SELECT 
+    SUM(no_sellers) * 100 / (
+        SELECT COUNT(DISTINCT seller_id) 
+        FROM sellers
+    ) AS percent_top_10_states
+FROM 
+	top_ten_states;
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    seller_state, 
-    seller_city, 
-    no_sellers
-FROM (
+WITH 
+	ranked_cities 
+AS 
+	(
     SELECT 
         seller_state, 
         seller_city, 
@@ -373,7 +406,13 @@ FROM (
 		sellers
     GROUP BY 
 		seller_state, seller_city
-) ranked_cities
+) 
+SELECT 
+    seller_state, 
+    seller_city, 
+    no_sellers
+FROM 
+	ranked_cities
 WHERE 
 	city_rank <= 3
 ORDER BY 
@@ -381,10 +420,10 @@ ORDER BY
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    ranked_cities.seller_state,
-    SUM(no_sellers) * 100.0 / total_sellers AS percent_top_3_cities
-FROM (
+WITH 
+	ranked_cities 
+AS
+	(
     SELECT 
         seller_state,
         seller_city, 
@@ -394,8 +433,10 @@ FROM (
 		sellers
     GROUP BY 
 		seller_state, seller_city
-) ranked_cities
-JOIN (
+),
+total_sellers_per_state 
+AS
+	(
     SELECT 
         seller_state,
         COUNT(DISTINCT(seller_id)) AS total_sellers
@@ -403,15 +444,24 @@ JOIN (
 		sellers
     GROUP BY 
 		seller_state
-) total_sellers_per_state
+) 
+SELECT 
+    ranked_cities.seller_state,
+    SUM(no_sellers) * 100.0 / total_sellers AS percent_top_3_cities
+FROM 
+	ranked_cities 
+JOIN
+	total_sellers_per_state
 ON 
 	ranked_cities.seller_state = total_sellers_per_state.seller_state
 WHERE 
-	city_rank <= 3
+	city_rank <= 3 
 GROUP BY 
 	ranked_cities.seller_state, total_sellers
 ORDER BY 
-	percent_top_3_cities ASC;
+	total_sellers DESC
+LIMIT
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 -- 4) PRODUCTS
@@ -426,9 +476,12 @@ ORDER BY
 -- length_cm, height_cm, width_cm, volume_cm_cub, and density_g_per_cm_cub for top ten categories?
 ---------------------------------------------------------------------------------------------------------
 
-SELECT *
-	FROM products
-LIMIT 10;
+SELECT 
+	*
+FROM
+	products
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -436,13 +489,14 @@ SELECT
 	COUNT(*) AS no_rows, 
 	COUNT(DISTINCT(product_id)) AS no_product_id,
 	COUNT(DISTINCT(product_category_name)) AS no_product_category
-FROM products;
+FROM 
+	products;
 
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-    product_category_name_translation.product_category_name_english, 
-    COUNT(DISTINCT products.product_id) AS no_products
+    product_category_name_english, 
+    COUNT(DISTINCT product_id) AS no_products
 FROM 
     products
 LEFT JOIN 
@@ -450,18 +504,19 @@ LEFT JOIN
 ON 
     products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-    product_category_name_translation.product_category_name_english
+    product_category_name_english
 ORDER BY 
     no_products DESC
-LIMIT 10;
+LIMIT 
+	10;
 
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-    products.product_id,
-    product_category_name_translation.product_category_name_english,
-    ROUND(products.product_length_cm * products.product_height_cm * products.product_width_cm, 2) AS product_volume_cm_cub,
-    ROUND(products.product_weight_g / (products.product_length_cm * products.product_height_cm * products.product_width_cm), 2) AS product_density_g_per_cm_cub
+    product_id,
+    product_category_name_english,
+    ROUND(product_length_cm * product_height_cm * product_width_cm, 2) AS product_volume_cm_cub,
+    ROUND(product_weight_g / (product_length_cm * product_height_cm * product_width_cm), 2) AS product_density_g_per_cm_cub
 FROM 
     products
 LEFT JOIN 
@@ -472,8 +527,8 @@ ON
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-	product_category_name_translation.product_category_name_english,
-	ROUND(AVG(product_weight_g), 2) AS avg_weight_g
+	product_category_name_english,
+	ROUND(AVG(product_weight_g), 2) AS avg_product_weight_g
 FROM 
 	products
 LEFT JOIN 
@@ -481,7 +536,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	avg_weight_g DESC
 LIMIT 
@@ -490,7 +545,7 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	ROUND(AVG(product_length_cm*product_height_cm*product_width_cm), 2) AS avg_product_volume_cm_cub
 FROM products
 LEFT JOIN
@@ -498,7 +553,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	avg_product_volume_cm_cub DESC
 LIMIT 
@@ -507,8 +562,8 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-	product_category_name_translation.product_category_name_english,
-	ROUND(AVG(product_weight_g / (product_length_cm*product_height_cm*product_width_cm)), 2) AS avg_density_g_per_cm_cub
+	product_category_name_english,
+	ROUND(AVG(product_weight_g / (product_length_cm*product_height_cm*product_width_cm)), 2) AS avg_product_density_g_per_cm_cub
 FROM 
 	products
 LEFT JOIN 
@@ -516,7 +571,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	avg_density_g_per_cm_cub DESC
 LIMIT 
@@ -529,8 +584,8 @@ SELECT
 	COUNT(DISTINCT (product_name_lenght)) AS N,
 	ROUND(AVG(product_name_lenght), 0) AS mean,
 	ROUND(STDDEV(product_name_lenght), 0) AS STD,
-	MAX(product_name_lenght) AS max,
-	MIN(product_name_lenght) AS min,
+	MAX(product_name_lenght) AS maximum,
+	MIN(product_name_lenght) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_name_lenght) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_name_lenght) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_name_lenght) AS "25_percentile",
@@ -545,8 +600,8 @@ SELECT
 	COUNT(DISTINCT (product_description_lenght)) AS N,
 	ROUND(AVG(product_description_lenght), 0) AS mean,
 	ROUND(STDDEV(product_description_lenght), 0) AS STD,
-	MAX(product_description_lenght) AS max,
-	MIN(product_description_lenght) AS min,
+	MAX(product_description_lenght) AS maximum,
+	MIN(product_description_lenght) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_description_lenght) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_description_lenght) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_description_lenght) AS "25_percentile",
@@ -577,14 +632,14 @@ SELECT
 	COUNT(DISTINCT (product_weight_g)) AS N,
 	ROUND(AVG(product_weight_g), 0) AS mean,
 	ROUND(STDDEV(product_weight_g), 0) AS STD,
-	MAX(product_weight_g) AS max,
-	MIN(product_weight_g) AS min,
+	MAX(product_weight_g) AS maximum,
+	MIN(product_weight_g) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_weight_g) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_weight_g) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_weight_g) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_weight_g) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_weight_g) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_weight_g) AS "99_percentile"
+	PERCENTILE_CONT (0.01) WITHIN GROUP (ORDER BY product_weight_g) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_weight_g) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_weight_g) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_weight_g) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_weight_g) AS "99_percentile"
 FROM 
 	products
 UNION
@@ -593,14 +648,14 @@ SELECT
 	COUNT(DISTINCT (product_length_cm)) AS N,
 	ROUND(AVG(product_length_cm), 0) AS mean,
 	ROUND(STDDEV(product_length_cm), 0) AS STD,
-	MAX(product_length_cm) AS max,
-	MIN(product_length_cm) AS min,
+	MAX(product_length_cm) AS maximum,
+	MIN(product_length_cm) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_length_cm) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_length_cm) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_length_cm) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_length_cm) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_length_cm) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_length_cm) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_length_cm) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_length_cm) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_length_cm) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_length_cm) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_length_cm) AS "99_percentile"
 FROM 
 	products
 UNION
@@ -609,14 +664,14 @@ SELECT
 	COUNT(DISTINCT (product_height_cm)) AS N,
 	ROUND(AVG(product_height_cm), 0) AS mean,
 	ROUND(STDDEV(product_height_cm), 0) AS STD,
-	MAX(product_height_cm) AS max,
-	MIN(product_height_cm) AS min,
+	MAX(product_height_cm) AS maximum,
+	MIN(product_height_cm) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_height_cm) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_height_cm) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_height_cm) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_height_cm) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_height_cm) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_height_cm) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_height_cm) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_height_cm) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_height_cm) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_height_cm) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_height_cm) AS "99_percentile"
 FROM 
 	products
 UNION
@@ -625,14 +680,14 @@ SELECT
 	COUNT(DISTINCT (product_width_cm)) AS N,
 	ROUND(AVG(product_width_cm), 0) AS mean,
 	ROUND(STDDEV(product_width_cm), 0) AS STD,
-	MAX(product_width_cm) AS max,
-	MIN(product_width_cm) AS min,
+	MAX(product_width_cm) AS maximum,
+	MIN(product_width_cm) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_width_cm) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_width_cm) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_width_cm) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_width_cm) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_width_cm) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_width_cm) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_width_cm) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_width_cm) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_width_cm) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_width_cm) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_width_cm) AS "99_percentile"
 FROM 
 	products
 UNION
@@ -641,14 +696,14 @@ SELECT
 	COUNT(DISTINCT (product_volume_cm_cub)) AS N,
 	ROUND(AVG(product_volume_cm_cub), 0) AS mean,
 	ROUND(STDDEV(product_volume_cm_cub), 0) AS STD,
-	MAX(product_volume_cm_cub) AS max,
-	MIN(product_volume_cm_cub) AS min,
+	MAX(product_volume_cm_cub) AS maximum,
+	MIN(product_volume_cm_cub) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_volume_cm_cub) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_volume_cm_cub) AS "99_percentile"
 FROM
 	(SELECT
 		product_length_cm*product_height_cm*product_width_cm AS product_volume_cm_cub
@@ -664,14 +719,14 @@ SELECT
 	COUNT(DISTINCT (product_density_g_per_cm_cub)) AS N,
 	ROUND(AVG(product_density_g_per_cm_cub), 0) AS mean,
 	ROUND(STDDEV(product_density_g_per_cm_cub), 0) AS STD,
-	MAX(product_density_g_per_cm_cub) AS max,
-	MIN(product_density_g_per_cm_cub) AS min,
+	MAX(product_density_g_per_cm_cub) AS maximum,
+	MIN(product_density_g_per_cm_cub) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_density_g_per_cm_cub) AS "99_percentile"
 FROM
 	(SELECT 
 		product_id,
@@ -686,13 +741,13 @@ FROM
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_name_lenght)) AS N,
 	ROUND(AVG(product_name_lenght), 0) AS mean,
 	ROUND(STDDEV(product_name_lenght), 0) AS STD,
-	MAX(product_name_lenght) AS max,
-	MIN(product_name_lenght) AS min,
+	MAX(product_name_lenght) AS maximum,
+	MIN(product_name_lenght) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_name_lenght) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_name_lenght) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_name_lenght) AS "25_percentile",
@@ -706,7 +761,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -715,13 +770,13 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_description_lenght)) AS N,
 	ROUND(AVG(product_description_lenght), 0) AS mean,
 	ROUND(STDDEV(product_description_lenght), 0) AS STD,
-	MAX(product_description_lenght) AS max,
-	MIN(product_description_lenght) AS min,
+	MAX(product_description_lenght) AS maximum,
+	MIN(product_description_lenght) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_description_lenght) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_description_lenght) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_description_lenght) AS "25_percentile",
@@ -735,7 +790,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -744,13 +799,13 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_photos_qty)) AS N,
 	ROUND(AVG(product_photos_qty), 0) AS mean,
 	ROUND(STDDEV(product_photos_qty), 0) AS STD,
-	MAX(product_photos_qty) AS max,
-	MIN(product_photos_qty) AS min,
+	MAX(product_photos_qty) AS maximum,
+	MIN(product_photos_qty) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_photos_qty) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_photos_qty) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_photos_qty) AS "25_percentile",
@@ -764,7 +819,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -773,19 +828,19 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_weight_g)) AS N,
 	ROUND(AVG(product_weight_g), 0) AS mean,
 	ROUND(STDDEV(product_weight_g), 0) AS STD,
-	MAX(product_weight_g) AS max,
-	MIN(product_weight_g) AS min,
+	MAX(product_weight_g) AS maximum,
+	MIN(product_weight_g) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_weight_g) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_weight_g) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_weight_g) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_weight_g) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_weight_g) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_weight_g) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_weight_g) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_weight_g) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_weight_g) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_weight_g) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_weight_g) AS "99_percentile"
 FROM 
 	products 
 LEFT JOIN 
@@ -793,7 +848,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -802,19 +857,19 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_length_cm)) AS N,
 	ROUND(AVG(product_length_cm), 0) AS mean,
 	ROUND(STDDEV(product_length_cm), 0) AS STD,
-	MAX(product_length_cm) AS max,
-	MIN(product_length_cm) AS min,
+	MAX(product_length_cm) AS maximum,
+	MIN(product_length_cm) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_length_cm) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_length_cm) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_length_cm) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_length_cm) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_length_cm) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_length_cm) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_length_cm) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_length_cm) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_length_cm) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_length_cm) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_length_cm) AS "99_percentile"
 FROM 
 	products 
 LEFT JOIN 
@@ -822,7 +877,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -831,19 +886,19 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_height_cm)) AS N,
 	ROUND(AVG(product_height_cm), 0) AS mean,
 	ROUND(STDDEV(product_height_cm), 0) AS STD,
-	MAX(product_height_cm) AS max,
-	MIN(product_height_cm) AS min,
+	MAX(product_height_cm) AS maximum,
+	MIN(product_height_cm) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_height_cm) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_height_cm) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_height_cm) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_height_cm) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_height_cm) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_height_cm) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_height_cm) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_height_cm) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_height_cm) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_height_cm) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_height_cm) AS "99_percentile"
 FROM 
 	products 
 LEFT JOIN 
@@ -851,7 +906,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -860,19 +915,19 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (product_width_cm)) AS N,
 	ROUND(AVG(product_width_cm), 0) AS mean,
 	ROUND(STDDEV(product_width_cm), 0) AS STD,
-	MAX(product_width_cm) AS max,
-	MIN(product_width_cm) AS min,
+	MAX(product_width_cm) AS maximum,
+	MIN(product_width_cm) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY product_width_cm) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY product_width_cm) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY product_width_cm) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY product_width_cm) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY product_width_cm) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY product_width_cm) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY product_width_cm) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY product_width_cm) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY product_width_cm) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY product_width_cm) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY product_width_cm) AS "99_percentile"
 FROM 
 	products 
 LEFT JOIN 
@@ -880,7 +935,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -889,19 +944,19 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (ROUND(product_length_cm*product_height_cm*product_width_cm, 2))) AS N,
 	ROUND(AVG(ROUND(product_length_cm*product_height_cm*product_width_cm, 2)), 0) AS mean,
 	ROUND(STDDEV(ROUND(product_length_cm*product_height_cm*product_width_cm, 2)), 0) AS STD,
-	MAX(ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS max,
-	MIN(ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS min,
+	MAX(ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS maximum,
+	MIN(ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY ROUND(product_length_cm*product_height_cm*product_width_cm, 2)) AS "99_percentile"
 FROM 
 	products 
 LEFT JOIN 
@@ -909,7 +964,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -918,19 +973,19 @@ LIMIT
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	product_category_name_translation.product_category_name_english,
+	product_category_name_english,
 	COUNT(DISTINCT(product_id)) AS no_prodcuts,
 	COUNT(DISTINCT (ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2))) AS N,
 	ROUND(AVG(ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)), 0) AS mean,
 	ROUND(STDDEV(ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)), 0) AS STD,
-	MAX(ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS max,
-	MIN(ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS min,
+	MAX(ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS maximum,
+	MIN(ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY ROUND(product_weight_g / (product_length_cm*product_height_cm*product_width_cm), 2)) AS "99_percentile"
 FROM 
 	products 
 LEFT JOIN 
@@ -938,7 +993,7 @@ LEFT JOIN
 ON 
 	products.product_category_name = product_category_name_translation.product_category_name
 GROUP BY 
-	product_category_name_translation.product_category_name_english
+	product_category_name_english
 ORDER BY 
 	no_prodcuts DESC
 LIMIT 
@@ -950,16 +1005,17 @@ LIMIT
 -- What is the overall delivery rate?
 -- For how many years do the orders span?
 -- How does the delivery rate change across years, quarters, and months?
--- When are customers most likely to make purchases during the day (hour of the day)?
 -- What is the average approval time, and how does it change across years, quarters, and months?
 -- What is the average carrier delivery time since approval, and how does it change over years, quarters, and months?
 -- What is the average delivery time of the carrier, and how does it change across years, quarters, and months?
+-- When are customers most likely to make purchases during the day (hour of the day)?
 -- What are the most frequent purchase days of the week?
 -- What are the most frequent delivery days of the week?
 -- How accurate is the estimated delivery date, and how does this accuracy change over time (years, quarters, and months)?
 ---------------------------------------------------------------------------------------------------------
 
-SELECT * 
+SELECT 
+	* 
 FROM 
 	orders
 LIMIT 
@@ -999,121 +1055,147 @@ FROM
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
-	DISTINCT(DATE_PART('year', order_purchase_timestamp)) AS number_of_years
+	DISTINCT(DATE_PART('year', order_purchase_timestamp)) AS no_of_years
 FROM 
 	orders;
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-	counted_total_order_status.year,
-	total_order_status,
-	ROUND(sub_total_order_status * 100.0 / total_order_status, 2) AS percent_sub_total_status
-FROM
-	(SELECT 
+WITH 
+	counted_sub_total_order_status
+AS
+	(
+	SELECT 
 		DATE_PART('year', order_purchase_timestamp) AS year,
 		order_status,
 		COUNT(order_status) AS sub_total_order_status
 	FROM 
 	 	orders
 	GROUP BY 
-	 	year, order_status) counted_sub_total_order_status
-JOIN
-	(SELECT 
+	 	year, order_status
+	),
+	counted_total_order_status
+AS
+	(
+	SELECT 
 		DATE_PART('year', order_purchase_timestamp) AS year,
 		COUNT(order_status) AS total_order_status
 	FROM 
 	 	orders
 	GROUP BY 
-	 	year) counted_total_order_status
+	 	year
+	)
+SELECT 
+	counted_total_order_status.year,
+	total_order_status,
+	ROUND(sub_total_order_status * 100.0 / total_order_status, 2) AS percent_sub_total_status
+FROM
+	counted_sub_total_order_status
+JOIN
+	counted_total_order_status
 ON 
 	counted_sub_total_order_status.year = counted_total_order_status.year
 WHERE 
-	counted_sub_total_order_status.order_status = 'delivered'
+	order_status = 'delivered'
 ORDER BY 
 	year;
 
 ---------------------------------------------------------------------------------------------------------
 
+WITH  
+	counted_sub_total_order_status
+AS
+	(
+	SELECT 
+        DATE_PART('year', order_purchase_timestamp) AS year,
+        DATE_PART('quarter', order_purchase_timestamp) AS quarter,
+        order_status,
+        COUNT(order_status) AS sub_total_order_status
+    FROM 
+	 	orders
+    GROUP BY
+	 	year, quarter, order_status
+	),
+	counted_total_order_status
+AS
+    (
+	SELECT 
+        DATE_PART('year', order_purchase_timestamp) AS year,
+        DATE_PART('quarter', order_purchase_timestamp) AS quarter,
+        COUNT(order_status) AS total_order_status
+    FROM 
+	 	orders
+    GROUP BY
+	 	year, quarter
+	) 
 SELECT 
     counted_total_order_status.year,
     counted_total_order_status.quarter,
     total_order_status,
     ROUND(sub_total_order_status * 100.0 / total_order_status, 2) AS percent_sub_total_status
 FROM
-    (SELECT 
-        DATE_PART('year', order_purchase_timestamp) AS year,
-        DATE_PART('quarter', order_purchase_timestamp) AS quarter,
-        order_status,
-        COUNT(order_status) AS sub_total_order_status
-    FROM 
-	 	orders
-    GROUP BY
-	 	year, quarter, order_status) counted_sub_total_order_status
+	counted_sub_total_order_status
 JOIN
-    (SELECT 
-        DATE_PART('year', order_purchase_timestamp) AS year,
-        DATE_PART('quarter', order_purchase_timestamp) AS quarter,
-        COUNT(order_status) AS total_order_status
-    FROM 
-	 	orders
-    GROUP BY
-	 	year, quarter) counted_total_order_status
+	counted_total_order_status
 ON 
 	counted_sub_total_order_status.year = counted_total_order_status.year
 AND 
 	counted_sub_total_order_status.quarter = counted_total_order_status.quarter
 WHERE 
-	counted_sub_total_order_status.order_status = 'delivered'
+	order_status = 'delivered'
 ORDER BY 
 	year, quarter;
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT 
-    counted_total_order_status.year,
-    counted_total_order_status.month,
-    total_order_status,
-    ROUND(sub_total_order_status * 100.0 / total_order_status, 2) AS percent_sub_total_status
-FROM
-    (SELECT 
+WITH  
+	counted_sub_total_order_status 
+AS
+	(
+	SELECT 
         DATE_PART('year', order_purchase_timestamp) AS year,
+		DATE_PART('quarter', order_purchase_timestamp) AS quarter,
         DATE_PART('month', order_purchase_timestamp) AS month,
         order_status,
         COUNT(order_status) AS sub_total_order_status
     FROM 
 	 	orders
     GROUP BY
-	 	year, month, order_status) counted_sub_total_order_status
-JOIN
-    (SELECT 
+	 	year, quarter, month, order_status
+	), 
+	counted_total_order_status
+AS
+    (
+		SELECT 
         DATE_PART('year', order_purchase_timestamp) AS year,
+		DATE_PART('quarter', order_purchase_timestamp) AS quarter,
         DATE_PART('month', order_purchase_timestamp) AS month,
         COUNT(order_status) AS total_order_status
     FROM 
 	 	orders
     GROUP BY
-	 	year, month) counted_total_order_status
+	 	year, quarter, month
+	) 
+SELECT 
+    counted_total_order_status.year,
+    counted_total_order_status.quarter,
+	 counted_total_order_status.month,
+    total_order_status,
+    ROUND(sub_total_order_status * 100.0 / total_order_status, 2) AS percent_sub_total_status
+FROM
+	counted_sub_total_order_status 
+JOIN
+	counted_total_order_status
 ON 
 	counted_sub_total_order_status.year = counted_total_order_status.year
+AND
+	counted_sub_total_order_status.quarter = counted_total_order_status.quarter
 AND 
 	counted_sub_total_order_status.month = counted_total_order_status.month
 WHERE 
-	counted_sub_total_order_status.order_status = 'delivered'
+	order_status = 'delivered'
 ORDER BY
-	year, month;
-	
----------------------------------------------------------------------------------------------------------
-
-SELECT 
-	DATE_PART('hour', order_purchase_timestamp) AS purchase_hour, 
-	COUNT(order_id) AS no_purchase_per_hour
-FROM 
-	orders
-GROUP BY 
-	purchase_hour
-ORDER BY 
-	no_purchase_per_hour DESC;
+	year, quarter, month;
 	
 ---------------------------------------------------------------------------------------------------------
 	
@@ -1157,6 +1239,7 @@ ORDER BY
 	
 SELECT 
     DATE_PART('year', order_approved_at) AS year, 
+	DATE_PART('quarter', order_approved_at) AS quarter,
 	DATE_PART('month', order_approved_at) AS month,
     AVG(order_approved_at - order_purchase_timestamp) AS avg_approve_time
 FROM 
@@ -1164,9 +1247,9 @@ FROM
 WHERE 
 	order_approved_at IS NOT NULL
 GROUP BY 
-	year, month
+	year, quarter, month
 ORDER BY
-	year, month;
+	year, quarter, month;
 
 ---------------------------------------------------------------------------------------------------------
 	
@@ -1216,6 +1299,7 @@ ORDER BY
 
 SELECT 
     DATE_PART('year', order_approved_at) AS year,
+	DATE_PART('quarter', order_approved_at) AS quarter,
 	DATE_PART('month', order_approved_at) AS month,
     AVG(order_delivered_carrier_date - order_approved_at) AS avg_delivered_carrier_time
 FROM 
@@ -1225,9 +1309,9 @@ WHERE
 AND
 	order_delivered_carrier_date IS NOT NULL
 GROUP BY 
-	year, month
+	year, quarter, month
 ORDER BY 
-	year, month;
+	year, quarter, month;
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -1277,6 +1361,7 @@ ORDER BY
 	
 SELECT 
     DATE_PART('year', order_delivered_carrier_date) AS year, 
+	DATE_PART('quarter', order_delivered_carrier_date) AS quarter,
 	DATE_PART('month', order_delivered_carrier_date) AS month,
     AVG(order_delivered_customer_date - order_delivered_carrier_date) AS avg_delivered_customer_time
 FROM 
@@ -1286,9 +1371,21 @@ WHERE
 AND
 	order_delivered_customer_date IS NOT NULL
 GROUP BY 
-	year, month
+	year, quarter, month
 ORDER BY 
-	year, month;
+	year, quarter, month;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	DATE_PART('hour', order_purchase_timestamp) AS purchase_hour, 
+	COUNT(order_id) AS no_purchase_per_hour
+FROM 
+	orders
+GROUP BY 
+	purchase_hour
+ORDER BY 
+	no_purchase_per_hour DESC;
 	
 ---------------------------------------------------------------------------------------------------------
 	
@@ -1305,7 +1402,7 @@ ORDER BY
 ---------------------------------------------------------------------------------------------------------
 
 SELECT
-	DATE_pART('hour', order_delivered_customer_date) AS order_delivered_customer_hour,
+	DATE_PART('hour', order_delivered_customer_date) AS order_delivered_customer_hour,
 	COUNT (order_id) AS no_orders
 FROM
 	orders
@@ -1378,6 +1475,7 @@ ORDER BY
 
 SELECT 
 	DATE_PART('year', order_delivered_customer_date) AS year,
+	DATE_PART('quarter', order_delivered_customer_date) AS quarter,
 	DATE_PART('month', order_delivered_customer_date) AS month,
     ROUND(SUM(CASE WHEN order_delivered_customer_date < order_estimated_delivery_date THEN 1 ELSE 0 END) * 100.0 /COUNT(order_delivered_customer_date), 1) AS estimated_accuracy
 FROM 
@@ -1387,9 +1485,9 @@ WHERE
 AND 
 	order_estimated_delivery_date IS NOT NULL
 GROUP BY
-	year, month
+	year, quarter, month
 ORDER BY 
-	year, month;
+	year, quarter, month;
 
 ---------------------------------------------------------------------------------------------------------
 -- 6) ORDER ITEMS:
