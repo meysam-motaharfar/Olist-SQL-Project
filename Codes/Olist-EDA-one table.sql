@@ -1,4 +1,4 @@
--- OLIST EXPLORATORY ANALYSIS - INDIVIDUAL TABLES
+-- OLIST EXPLORATORY ANALYSIS - ONE TABLE
 
 ---------------------------------------------------------------------------------------------------------
 -- 1) PRODUCT_CATEGORY_NAME_TRANSLATION:
