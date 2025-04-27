@@ -1,4 +1,4 @@
--- OLIST EXPLORATORY ANALYSIS - PAIR TABLES
+-- OLIST EXPLORATORY ANALYSIS - TWO TABLES
 
 ---------------------------------------------------------------------------------------------------------
 -- 1) CUSTOMER-ORDERS:
