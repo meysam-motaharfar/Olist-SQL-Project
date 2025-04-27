@@ -996,6 +996,7 @@ LIMIT
 -- When are customers most likely to make purchases during the day (hour of the day)?
 -- What are the most frequent purchase days of the week?
 -- What are the most frequent delivery days of the week?
+-- How many customers placed multiple orders?
 -- How accurate is the estimated delivery date, and how does this accuracy change over time (years, quarters, and months)?
 ---------------------------------------------------------------------------------------------------------
 
@@ -1396,6 +1397,20 @@ GROUP BY
 	day_of_week
 ORDER BY
 	no_orders DESC;
+
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+    customer_id, 
+    COUNT(DISTINCT order_id) AS orders_placed
+FROM 
+    orders
+GROUP BY 
+    customer_id
+HAVING 
+	COUNT(DISTINCT order_id)>=2
+ORDER BY 
+    orders_placed DESC;
 	
 ---------------------------------------------------------------------------------------------------------
 
