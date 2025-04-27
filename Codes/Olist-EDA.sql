@@ -1465,8 +1465,17 @@ ORDER BY
 -- What are top 10 most expensive products and shiping cost?
 -- What is the ratio of total products sold to the total number of orders (product-order ratio)?
 -- Which sellers account for more than 1% of the total orders placed?
--- What are the descriptive statistics (mean, median, min, max, standard deviation) for the product prices?
--- What are the descriptive statistics (mean, median, min, max, standard deviation) for freight (shipping) value?
+-- What are the descriptive statistics for the product prices?
+-- What are the descriptive statistics for freight (shipping) value?
+---------------------------------------------------------------------------------------------------------
+
+SELECT 
+	*
+FROM
+	order_items
+LIMIT
+	10;
+
 ---------------------------------------------------------------------------------------------------------
 
 SELECT 
@@ -1480,7 +1489,8 @@ LIMIT
 
 ---------------------------------------------------------------------------------------------------------
 
-SELECT *
+SELECT 
+	*
 FROM 
 	order_items
 ORDER BY 
@@ -1522,14 +1532,14 @@ SELECT
 	COUNT(DISTINCT (price)) AS N,
 	ROUND(AVG(price), 0) AS mean,
 	ROUND(STDDEV(price), 0) AS STD,
-	MAX(price) AS max,
-	MIN(price) AS min,
+	MAX(price) AS maximum,
+	MIN(price) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY price) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY price) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY price) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY price) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY price) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY price) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY price) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY price) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY price) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY price) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY price) AS "99_percentile"
 FROM 
 	order_items
 UNION
@@ -1539,14 +1549,14 @@ SELECT
 	COUNT(DISTINCT (freight_value)) AS N,
 	ROUND(AVG(freight_value), 0) AS mean,
 	ROUND(STDDEV(freight_value), 0) AS STD,
-	MAX(freight_value) AS max,
-	MIN(freight_value) AS min,
+	MAX(freight_value) AS maximum,
+	MIN(freight_value) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY freight_value) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY freight_value) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY freight_value) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY freight_value) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY freight_value) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY freight_value) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY freight_value) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY freight_value) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY freight_value) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY freight_value) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY freight_value) AS "99_percentile"
 FROM 
 	order_items;
 
@@ -1588,8 +1598,8 @@ SELECT
 	COUNT(DISTINCT (payment_sequential)) AS N,
 	ROUND(AVG(payment_sequential), 0) AS mean,
 	ROUND(STDDEV(payment_sequential), 0) AS STD,
-	MAX(payment_sequential) AS max,
-	MIN(payment_sequential) AS min,
+	MAX(payment_sequential) AS maximum,
+	MIN(payment_sequential) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY payment_sequential) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY payment_sequential) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY payment_sequential) AS "25_percentile",
@@ -1604,8 +1614,8 @@ SELECT
 	COUNT(DISTINCT (payment_installments)) AS N,
 	ROUND(AVG(payment_installments), 0) AS mean,
 	ROUND(STDDEV(payment_installments), 0) AS STD,
-	MAX(payment_installments) AS max,
-	MIN(payment_installments) AS min,
+	MAX(payment_installments) AS maximum,
+	MIN(payment_installments) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY payment_installments) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY payment_installments) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY payment_installments) AS "25_percentile",
@@ -1623,35 +1633,38 @@ SELECT
 	MAX(payment_value) AS max,
 	MIN(payment_value) AS min,
 	MODE() WITHIN GROUP (ORDER BY payment_value) AS mode,
-	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY payment_value) AS "01_percentile",
-	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY payment_value) AS "25_percentile",
-	PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY payment_value) AS median,
-	PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY payment_value) AS "75_percentile",
-	PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY payment_value) AS "99_percentile"
+	PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY payment_value) AS "01_percentile",
+	PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY payment_value) AS "25_percentile",
+	PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY payment_value) AS median,
+	PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY payment_value) AS "75_percentile",
+	PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY payment_value) AS "99_percentile"
 FROM 
 	order_payments;
 
 --------------------------------------------------------------------------------------------------------
 
+WITH order_totals AS (
+    SELECT 
+        order_id,
+        SUM(payment_value) AS total_value
+    FROM 
+        order_payments
+    GROUP BY 
+        order_id
+),
+ranked_orders AS (
+    SELECT 
+        total_value,
+        NTILE(100) OVER (ORDER BY total_value DESC) AS percentile
+    FROM 
+        order_totals
+)
 SELECT 
-	SUM(total_value) AS top_1_percent_total_value
-FROM
-	(SELECT 
-		order_id,
-		total_value,
-		NTILE(100) OVER (ORDER BY total_value DESC) AS percentile
-	FROM 
-		(SELECT 
-			order_id,
-			SUM(payment_value) AS total_value
-		FROM
-			order_payments
-		GROUP BY 
-			order_id
-		ORDER BY 
-			total_value DESC) order_total) ranked_orders
+    SUM(total_value) AS top_1_percent_total_value
+FROM 
+    ranked_orders
 WHERE 
-	percentile = 1;
+    percentile = 1;
 
 --------------------------------------------------------------------------------------------------------
 -- 8) ORDER REVIEWS:
@@ -1686,8 +1699,8 @@ SELECT
 	COUNT(DISTINCT (review_score)) AS N,
 	ROUND(AVG(review_score), 0) AS mean,
 	ROUND(STDDEV(review_score), 0) AS STD,
-	MAX(review_score) AS max,
-	MIN(review_score) AS min,
+	MAX(review_score) AS maximum,
+	MIN(review_score) AS minimum,
 	MODE() WITHIN GROUP (ORDER BY review_score) AS mode,
 	PERCENTILE_DISC(0.01) WITHIN GROUP (ORDER BY review_score) AS "01_percentile",
 	PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY review_score) AS "25_percentile",
@@ -1701,7 +1714,7 @@ FROM
 
 SELECT 
 	DATE_PART('year', review_answer_timestamp) AS year,
-	AVG(review_score) AS avg_rating
+	ROUND(AVG(review_score), 1) AS avg_rating
 FROM
 	order_reviews
 GROUP BY 
@@ -1714,7 +1727,7 @@ ORDER BY
 SELECT 
 	DATE_PART('year', review_answer_timestamp) AS year,
 	DATE_PART('quarter', review_answer_timestamp) AS quarter,
-	AVG(review_score) AS avg_rating
+	ROUND(AVG(review_score), 1) AS avg_rating
 FROM
 	order_reviews
 GROUP BY 
@@ -1726,14 +1739,15 @@ ORDER BY
 
 SELECT 
 	DATE_PART('year', review_answer_timestamp) AS year,
+	DATE_PART('quarter', review_answer_timestamp) AS quarter,
 	DATE_PART('month', review_answer_timestamp) AS month,
-	AVG(review_score) AS avg_rating
+	ROUND(AVG(review_score), 1) AS avg_rating
 FROM
 	order_reviews
 GROUP BY 
-	year, month
+	year, quarter, month
 ORDER BY 
-	year, month ASC;
+	year, quarter, month ASC;
 
 --------------------------------------------------------------------------------------------------------
 
@@ -1764,11 +1778,12 @@ ORDER BY
 	
 SELECT 
 	DATE_PART('year', review_creation_date) AS year,
+	DATE_PART('quarter', review_creation_date) AS quarter,
 	DATE_PART('month', review_creation_date) AS month,
 	AVG(review_answer_timestamp -  review_creation_date) AS AVG_answering_time
 FROM
 	order_reviews
 GROUP BY 
-	year, month
+	year, quarter, month
 ORDER BY 
-	year, month ASC;
+	year, quarter, month ASC;
